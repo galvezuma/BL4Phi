@@ -60,6 +60,7 @@
 #include "MultipleQuery.h"
 #include "ManageStats.h"
 #include "ManageExtended.h"
+#include "ManageDatabase.h"
 #include "Farrar.h"
 
 
@@ -71,6 +72,7 @@ struct {
 	int open_gap_cost;
 	int extend_gap_cost;
 	int threshold; // See http://www.biology.wustl.edu/gcg/psiblast.html
+	unsigned char nearby;
 	Sequence * sec_ref;
 	int8_t * matrix;
 	uint32_t num_letters;
@@ -88,6 +90,7 @@ void initContext(){
 	Context.open_gap_cost = 10;
 	Context.extend_gap_cost = 1;
 	Context.threshold = 120;
+	Context.nearby = 5;
 	Context.sec_ref = NULL;
 	Context.matrix = NULL;
 	Context.num_letters = 0;
@@ -103,8 +106,10 @@ int main2(int argc, char** argv) {
 //    createStats("/mic0fs/blphi/uniprot_sprot.fasta");
 //    checkcreateStats();
 
-	loadDatabaseExtended("/mic0fs/blphi/uniprot_sprot.fasta");
-	checkDatabaseExtended();
+//	loadDatabaseExtended("/mic0fs/blphi/uniprot_sprot.fasta");
+//	checkDatabaseExtended();
+
+	loadDatabase("/mic0fs/blphi/uniprot_sprot.fasta");
 
     return (EXIT_SUCCESS);
 
@@ -140,7 +145,10 @@ int main(int argc, char** argv) {
 	    } else if (!strcmp(argv[pos], "-m")) { // Read matrix
 	      strcpy(matrix_filename, argv[pos+1]);
 	      pos += 2;
-	    } else if (!strcmp(argv[pos], "-g")) { // Read costs
+	    } else if (!strcmp(argv[pos], "-n")) { // Read matrix
+	    	Context.nearby = atoi(argv[pos+1]);
+		    pos += 2;
+		} else if (!strcmp(argv[pos], "-g")) { // Read costs
 	      Context.open_gap_cost = atoi(argv[pos+1]);
 	      Context.extend_gap_cost = atoi(argv[pos+2]);
 	      fprintf(stdout, "Open gap set to: %d\nExtend gap set to: %d\n", Context.open_gap_cost, Context.extend_gap_cost);
@@ -151,7 +159,7 @@ int main(int argc, char** argv) {
 	    }
 	  }
 	  if (argc < pos + 2) {
-	    fprintf(stderr, "Usage: BLPhi [-t threshold] [-m matrix] [-g open_gap_cost extend_gap_cost] query.fasta database.fasta\n");
+	    fprintf(stderr, "Usage: BLPhi [-t threshold] [-m matrix] [-n nearby_per_16] [-g open_gap_cost extend_gap_cost] query.fasta database.fasta\n");
 	    return 1;
 	  }
 	  if (((uint8_t)Context.open_gap_cost) > 0xFF) { fprintf(stderr, "Open gap cost (%d) too big. The size is a byte.\n", Context.open_gap_cost); return 1; }
@@ -162,9 +170,9 @@ int main(int argc, char** argv) {
 	  if (Context.matrix == NULL) { return 1; }
 	  int numWorkers = NUM_THREAD_FOR_PROCESSING;
 	  int first[numWorkers], last[numWorkers];
-	  loadDatabaseExtended(argv[pos+1]);
+	  loadDatabase(argv[pos+1]);
+	  //loadDatabaseExtended(argv[pos+1]);
 	  //loadFastaAndBalanceLoad(argv[pos+1], first, last, numWorkers);
-
 
 	  while ((Context.sec_ref = loadNextQueryFromFasta(argv[pos])) != NULL) {
 		  if (Context.sec_ref == NULL) { return 1; }
@@ -190,7 +198,7 @@ int main(int argc, char** argv) {
 //	      _mm_free(databaseAlignedDemultiplexed[i].data);
 //	  }
 //	  free(databaseAlignedDemultiplexed);
-	  freeDatabaseExtended();
+	  //freeDatabaseExtended();
 	  fflush(stdout);
 	  fflush(stderr);
 	  free(Context.matrix);

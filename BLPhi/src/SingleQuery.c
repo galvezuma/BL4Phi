@@ -18,6 +18,7 @@ extern struct {
 	int open_gap_cost;
 	int extend_gap_cost;
 	int threshold; // See http://www.biology.wustl.edu/gcg/psiblast.html
+	unsigned char nearby;
 	Sequence * sec_ref;
 	int8_t * matrix;
 	uint32_t num_letters;
@@ -186,7 +187,7 @@ void * processBunchSingleFastaWholeDatabase(void * vparams) {
 //                        params->query->data[queryIdx+2],
 //                        params->query->data[queryIdx+3]
 //                        );
-                    if ((nearbyShifter != 0) && (__builtin_popcount (nearbyShifter) >= 3)) {
+                    if ((nearbyShifter != 0) && (__builtin_popcount (nearbyShifter) >= Context.nearby)) {
                     	params->ret.numFarrar ++;
                     	uint32_t score = smith_waterman_farrar(&o, databaseAlignedDemultiplexed[databaseIdx].realData, (int16_t)(databaseAlignedDemultiplexed[databaseIdx].realDataLength));
                     	if (score >= Context.threshold) {

@@ -21,7 +21,7 @@ extern uint32_t databaseNumSequences;
 
 char * bulkNames = NULL;
 char * bulkRealData = NULL;
-char * bulkData = NULL;
+extern char * bulkData = NULL;
 
 /*
  * The idea of this function is to reduce the execution time of the load database.
@@ -51,7 +51,7 @@ SequenceDemultiplexed * loadDatabaseExtended(char * filename){
     fread(bulkRealData, header.fastaRealDataNumBytes, 1, in);
     //
     bulkData = (char *) _mm_malloc(header.fastaDataNumBytes, 64);
-    fread(bulkData, header.fastaDataNumBytes, 1, in);
+    //fread(bulkData, header.fastaDataNumBytes, 1, in);
     ////
     int offset = 0;
     uint32_t data;
@@ -74,6 +74,37 @@ SequenceDemultiplexed * loadDatabaseExtended(char * filename){
     for(int i=0;i<databaseNumSequences;i++){
     	databaseAlignedDemultiplexed[i].data = bulkData + offset;
     	offset += databaseAlignedDemultiplexed[i].dataLength;
+    	if (databaseAlignedDemultiplexed[i].dataLength == 0) continue;
+    	// We copy the sequence as explained in the doumentation: demultiplexing
+		// Create first copy
+				int posSeq = 0;
+				uint32_t lengthToCopy = trunc4(databaseAlignedDemultiplexed[i].realDataLength);
+				memcpy(&(databaseAlignedDemultiplexed[i].data[posSeq]), databaseAlignedDemultiplexed[i].realData, lengthToCopy);
+				// Create second copy
+				posSeq += lengthToCopy;
+				lengthToCopy = trunc4(databaseAlignedDemultiplexed[i].realDataLength - 1);
+				memcpy(&(databaseAlignedDemultiplexed[i].data[posSeq]), databaseAlignedDemultiplexed[i].realData+1, lengthToCopy);
+				// Create third copy
+				posSeq += lengthToCopy;
+				lengthToCopy = trunc4(databaseAlignedDemultiplexed[i].realDataLength - 2);
+				memcpy(&(databaseAlignedDemultiplexed[i].data[posSeq]), databaseAlignedDemultiplexed[i].realData+2, lengthToCopy);
+				// Create fourth copy
+				posSeq += lengthToCopy;
+				lengthToCopy = trunc4(databaseAlignedDemultiplexed[i].realDataLength - 3);
+				memcpy(&(databaseAlignedDemultiplexed[i].data[posSeq]), databaseAlignedDemultiplexed[i].realData+3, lengthToCopy);
+				// Fill the final gaps
+				posSeq += lengthToCopy;
+				while (posSeq%64 != 0) databaseAlignedDemultiplexed[i].data[posSeq++] = 0;
+				if (databaseAlignedDemultiplexed[i].dataLength != posSeq)  {
+					printf("Seq of length %d, name %s\n%s\n%d\n%d\n\n",
+							databaseAlignedDemultiplexed[i].realDataLength,
+							databaseAlignedDemultiplexed[i].name,
+							databaseAlignedDemultiplexed[i].realData,
+							posSeq,
+							databaseAlignedDemultiplexed[i].dataLength);
+					errorAndExit("", "Internal error: inconsistency in alignments.");
+				}
+        // Finish of demultiplexing
 	}
 
     printf("%s\n%d\n%d\n%p\n", databaseAlignedDemultiplexed[125678].name, databaseAlignedDemultiplexed[125678].realDataLength, databaseAlignedDemultiplexed[125678].dataLength, databaseAlignedDemultiplexed[125678].data);
