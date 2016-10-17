@@ -12,7 +12,7 @@
 
 #undef NUM_THREAD_FOR_LOADING
 #define NUM_THREAD_FOR_LOADING 32
-#define CHUNK_SEQ_SIZE 2000
+#define CHUNK_SEQ_SIZE 2500
 
 typedef struct _SequencesChunk {
 	SequenceDemultiplexed chunkSequences[CHUNK_SEQ_SIZE];
@@ -25,7 +25,7 @@ typedef struct {
 } SequencesList;
 
 void initSequenceList(SequencesList *sl);
-void * addSequence(SequencesList *sl, SequenceDemultiplexed * s);
+void addSequence(SequencesList *sl, SequenceDemultiplexed * s);
 
 ////
 typedef struct {
@@ -38,6 +38,7 @@ typedef struct {
 } LoaderThreadParameters;
 
 void loadDatabase(char * filename);
+void freeDatabase();
 void * loadStep1(void * vparams);
 
 #endif /* MANAGEDATABASE_H_ */

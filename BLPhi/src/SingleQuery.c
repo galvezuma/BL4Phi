@@ -19,6 +19,7 @@ extern struct {
 	int extend_gap_cost;
 	int threshold; // See http://www.biology.wustl.edu/gcg/psiblast.html
 	unsigned char nearby;
+	unsigned char nonExhaustive;
 	Sequence * sec_ref;
 	int8_t * matrix;
 	uint32_t num_letters;
@@ -31,48 +32,6 @@ extern struct {
 	pthread_mutex_t mutex_next_db_seq;
 	volatile int next_db_seq_number;
 } Context;
-
-Sequence * loadSingleFasta(char * filename) {
-    Sequence * seqReturned;
-    FILE * in = fopen(filename, "rb");
-    if (in == NULL) errorAndExit(filename, "Cannot open file.");
-    
-    char line[MAX_LINE_LENGTH];
-    char sequence[MAX_SEQUENCE_LENGTH];
-    char * okReading;
-    
-    // Reading the name of the sequence
-    okReading = fgets(line, MAX_LINE_LENGTH, in);
-    if ((okReading == NULL) || (line[0] != '>')) errorAndExit(line, "Not a fasta header.");
-    
-    seqReturned = (Sequence *)malloc(sizeof(Sequence));
-    if (seqReturned == NULL) errorAndExit("SingleFasta", "Fatal error: Out of memory.");
-    line[strcspn(line, "\r\n")] = 0;
-    uint32_t lengthText = strlen(line);
-    seqReturned->name = (char *) malloc(lengthText + 1);
-    if (seqReturned->name == NULL) errorAndExit("SingleFasta.name", "Fatal error: Out of memory.");
-    strcpy(seqReturned->name, line);
-    
-    // Reading data of the sequence
-    uint32_t posSeq = 0;
-    okReading = fgets(line, MAX_LINE_LENGTH, in);
-    while((line[0] != '>') && okReading != NULL){
-        line[strcspn(line, "\r\n")] = 0;
-        lengthText = strlen(line);
-        if (posSeq+lengthText > MAX_SEQUENCE_LENGTH) errorAndExit(seqReturned->name, "Fatal error. Sequence too long.");
-        strcpy(sequence+posSeq, line);
-        posSeq += lengthText;
-        okReading = fgets(line, MAX_LINE_LENGTH, in);
-    }
-    seqReturned->dataLength = posSeq;
-    seqReturned->data = (char *) malloc(seqReturned->dataLength);
-    if (seqReturned->data == NULL) errorAndExit("SingleFasta.data", "Fatal error: Out of memory.");
-    memcpy(seqReturned->data, sequence, seqReturned->dataLength);
-    if (seqReturned->dataLength < 4) errorAndExit("SingleFasta.length", "The minimum length is 4.");
-    
-    fclose(in);    
-    return seqReturned;
-}
 
 // The last three parameters may be NULL.
 // If NULL then the load is balanced based on the number of sequences

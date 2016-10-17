@@ -41,11 +41,11 @@ Sequence * loadNextQueryFromFasta(char * filename) {
     }
 
     seqReturned = (Sequence *)malloc(sizeof(Sequence));
-    if (seqReturned == NULL) errorAndExit("SingleFasta", "Fatal error: Out of memory.");
+    if (seqReturned == NULL) errorAndExit("MultipleQuery", "Fatal error: Out of memory.");
     line[strcspn(line, "\r\n")] = 0;
     uint32_t lengthText = strlen(line);
     seqReturned->name = (char *) malloc(lengthText + 1);
-    if (seqReturned->name == NULL) errorAndExit("SingleFasta.name", "Fatal error: Out of memory.");
+    if (seqReturned->name == NULL) errorAndExit("MultipleQuery.name", "Fatal error: Out of memory.");
     strcpy(seqReturned->name, line);
 
     // Reading data of the sequence

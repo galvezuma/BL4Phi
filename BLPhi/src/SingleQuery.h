@@ -23,12 +23,10 @@ typedef struct {
     } ret;
 } paramToSingleQueryProcessThread;
 
-Sequence * loadSingleFasta(char * filename);
 void checkloadSingleFasta(Sequence * query);
 void processSingleFastaWholeDatabase(Sequence * query, int * first, int * last, int numWorkers);
 void * processBunchSingleFastaWholeDatabase(void * params);
 void freeSingleFasta(Sequence * query);
-
 
 #endif	/* SINGLEQUERY_H */
 

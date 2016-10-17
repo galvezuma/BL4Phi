@@ -6,7 +6,7 @@
 
 /*
  * File:   main.c
- * Author: galvezs
+ * Author: Sergio Gálvez Rojas
  *
  * Created on 01 June 2016, 14:03
  */
@@ -14,16 +14,8 @@
 /*
  * TO DO: Optimizations to do:
  *
- * 1.- OTHER SOLUTION GIVEN. Mixed use of threads for several queries. This should avoid the effect of very busy threads
- * at the end of the processing.
- *
- * 2.- Usage of different types of nearby shifters.
- *
  * 3.- KNL. Usage of amino acids letters in 4 bits instead of 8 bits. This should divide by two the execution time.
  * Intrinsic of epi16 must be used.
- *
- * 4.- Save pre-built structures to load it quickly at processing time. Actually, this is not a pre indexation
- * but a memory dump.
  *
  * 5.- Partition of a big database into parts.
  *
@@ -58,8 +50,6 @@
 #include "GeneralFunctions.h"
 #include "SingleQuery.h"
 #include "MultipleQuery.h"
-#include "ManageStats.h"
-#include "ManageExtended.h"
 #include "ManageDatabase.h"
 #include "Farrar.h"
 
@@ -73,6 +63,7 @@ struct {
 	int extend_gap_cost;
 	int threshold; // See http://www.biology.wustl.edu/gcg/psiblast.html
 	unsigned char nearby;
+	unsigned char nonExhaustive;
 	Sequence * sec_ref;
 	int8_t * matrix;
 	uint32_t num_letters;
@@ -91,46 +82,13 @@ void initContext(){
 	Context.extend_gap_cost = 1;
 	Context.threshold = 120;
 	Context.nearby = 5;
+	Context.nonExhaustive = 0;
 	Context.sec_ref = NULL;
 	Context.matrix = NULL;
 	Context.num_letters = 0;
 	Context.Farrar.letras_sec_ref = NULL;
 	Context.Farrar.long_profile = 0;
 	Context.Farrar.profile = NULL;
-}
-
-/*
- *
- */
-int main2(int argc, char** argv) {
-//    createStats("/mic0fs/blphi/uniprot_sprot.fasta");
-//    checkcreateStats();
-
-//	loadDatabaseExtended("/mic0fs/blphi/uniprot_sprot.fasta");
-//	checkDatabaseExtended();
-
-	loadDatabase("/mic0fs/blphi/uniprot_sprot.fasta");
-
-    return (EXIT_SUCCESS);
-
-	int numWorkers = NUM_THREAD_FOR_PROCESSING;
-	int first[numWorkers], last[numWorkers];
-	loadFastaAndBalanceLoad("/mic0fs/blphi/uniprot_sprot.fasta", first, last, numWorkers);
-    printf("Ending...\n");
-//    checkLoadFastaAndBalanceLoad(first, last, numWorkers);
-
-    Sequence * query = loadSingleFasta("/mic0fs/blphi/SingleQuery.fasta");
-    checkloadSingleFasta(query);
-    processSingleFastaWholeDatabase(query, first, last, numWorkers);
-//    freeSingleFasta(query);
-//
-//    printf("Freeing memory");
-//    for(int i=0;i<databaseNumSequences; i++) {
-//        free(databaseAlignedDemultiplexed[i].name);
-//        _mm_free(databaseAlignedDemultiplexed[i].data);
-//    }
-//    free(databaseAlignedDemultiplexed);
-    return (EXIT_SUCCESS);
 }
 
 int main(int argc, char** argv) {
@@ -148,6 +106,9 @@ int main(int argc, char** argv) {
 	    } else if (!strcmp(argv[pos], "-n")) { // Read matrix
 	    	Context.nearby = atoi(argv[pos+1]);
 		    pos += 2;
+		} else if (!strcmp(argv[pos], "-f")) { // Read matrix
+	    	Context.nonExhaustive = 1;
+		    pos += 1;
 		} else if (!strcmp(argv[pos], "-g")) { // Read costs
 	      Context.open_gap_cost = atoi(argv[pos+1]);
 	      Context.extend_gap_cost = atoi(argv[pos+2]);
@@ -159,7 +120,7 @@ int main(int argc, char** argv) {
 	    }
 	  }
 	  if (argc < pos + 2) {
-	    fprintf(stderr, "Usage: BLPhi [-t threshold] [-m matrix] [-n nearby_per_16] [-g open_gap_cost extend_gap_cost] query.fasta database.fasta\n");
+	    fprintf(stderr, "Usage: BLPhi [-t threshold] [-m matrix] [-n nearby_per_16] [-f(ast:non exhaustive)] [-g open_gap_cost extend_gap_cost] query.fasta database.fasta\n");
 	    return 1;
 	  }
 	  if (((uint8_t)Context.open_gap_cost) > 0xFF) { fprintf(stderr, "Open gap cost (%d) too big. The size is a byte.\n", Context.open_gap_cost); return 1; }
@@ -171,8 +132,6 @@ int main(int argc, char** argv) {
 	  int numWorkers = NUM_THREAD_FOR_PROCESSING;
 	  int first[numWorkers], last[numWorkers];
 	  loadDatabase(argv[pos+1]);
-	  //loadDatabaseExtended(argv[pos+1]);
-	  //loadFastaAndBalanceLoad(argv[pos+1], first, last, numWorkers);
 
 	  while ((Context.sec_ref = loadNextQueryFromFasta(argv[pos])) != NULL) {
 		  if (Context.sec_ref == NULL) { return 1; }
@@ -183,22 +142,15 @@ int main(int argc, char** argv) {
 		  /*
 		   * Main loop that iterates over the Query Fasta file for each query sequence
 		   */
-		  //processSingleFastaWholeDatabase(Context.sec_ref, first, last, numWorkers);
 		  processSingleFastaWholeDatabase(Context.sec_ref, NULL, NULL, numWorkers);
 		  freeSingleFasta(Context.sec_ref);
 		  prepareForNextQuery();
 	  }
 
 
-	  //TAREAS DE FINALIZACIÓN
+	  // TASKS TO FINISH
 	  printf("Freeing memory\n");
-//	  for(int i=0;i<databaseNumSequences; i++) {
-//	      free(databaseAlignedDemultiplexed[i].name);
-//	      free(databaseAlignedDemultiplexed[i].realData);
-//	      _mm_free(databaseAlignedDemultiplexed[i].data);
-//	  }
-//	  free(databaseAlignedDemultiplexed);
-	  //freeDatabaseExtended();
+	  freeDatabase();
 	  fflush(stdout);
 	  fflush(stderr);
 	  free(Context.matrix);
