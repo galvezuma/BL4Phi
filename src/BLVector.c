@@ -14,29 +14,18 @@
 /*
  * TO DO: Optimizations to do:
  *
- * 3.- KNL. Usage of amino acids letters in 4 bits instead of 8 bits. This should divide by two the execution time.
- * Intrinsic of epi16 must be used.
+ * 1.- Partition of a big database into parts.
  *
- * 5.- Partition of a big database into parts.
+ * 2.- Future one. Provide the actual alignment including data: start, end, etc.
  *
- * 6.- A good wish. Utilization of several Xeon-Phi cards. I do not like this because it forces to coordinate the cards from
- * outside, whereas we have programmed the cards in native mode.
- *
- * 7.- Future one. Provide the actual alignment including data: start, end, etc.
- *
- * 8.- Usage like blastx.
+ * 3.- Usage like blastx.
  *
  * Please, do not forget to use the latest release of Swiss Prot.
  *
- * 9.- Transformation to use nucleotides instead of amino acids. I think that the use of nibbles for this may be
+ * 4.- Transformation to use nucleotides instead of amino acids. I think that the use of nibbles for this may be
  * the best approach: we require a match of 8 letters and we may require three or four matches in a
  * particular nearby region.
  *
- */
-
-/*
- * Release 2016_08 of 07-Sep-16 of UniProtKB/Swiss-Prot contains 551987 sequence entries,
- * comprising 197275398 amino acids abstracted from 246580 references.
  */
 
 #include <stdio.h>
@@ -115,7 +104,7 @@ int main(int argc, char** argv) {
 	    }
 	  }
 	  if (argc < pos + 2) {
-	    fprintf(stderr, "Usage: BLPhi [-t threshold] [-c cluster] [-m matrix] [-n nearby_per_16] [-f(ast:non exhaustive)] [-b(est hit only)] [-g open_gap_cost extend_gap_cost] query.fasta database.fasta\n");
+	    fprintf(stderr, "Usage: BLVector [-t threshold] [-c cluster] [-m matrix] [-n nearby_per_16] [-f(ast:non exhaustive)] [-b(est hit only)] [-g open_gap_cost extend_gap_cost] query.fasta database.fasta\n");
 	    return 1;
 	  }
 	  if (((uint8_t)Context.open_gap_cost) > 0xFF) { fprintf(stderr, "Open gap cost (%d) too big. The size is a byte.\n", Context.open_gap_cost); return 1; }
