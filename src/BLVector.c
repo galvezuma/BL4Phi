@@ -8,7 +8,7 @@
  * File:   main.c
  * Author: Sergio Gálvez Rojas
  *
- * Created on 01 June 2016, 14:03
+ * Created on 01 June 2020, 14:03
  */
 
 /*
@@ -48,7 +48,7 @@ uint32_t databaseNumSequences;
 
 // Context is mainly Read Only in the threads (but -best-)
 // This alignment is critical for performance
-//#pragma pack(1)
+
 __declspec(align(64)) struct GlobalContext Context;
 
 void initContext(){

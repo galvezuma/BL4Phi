@@ -1,7 +1,7 @@
 /*
  * ManageDatabase.c
  *
- *  Created on: 13 de oct. de 2016
+ *  Created on: 13 de oct. de 2020
  *      Author: galvez
  */
 
@@ -77,7 +77,7 @@ void loadDatabase(char * filename){
     uint32_t currentGlobalPos = 0;
     SequencesChunk * currentChunk = NULL;
     for(int i=0; i < numLoaders; i++){
-    	// printf("Grouping %d\n", i);
+    	 
     	currentChunk = paramsLoad[i].ret.headerChunk;
         for (int counter = paramsLoad[i].ret.numSequences - 1; counter >= 0 ; counter --){
         	int posInChunk = counter % CHUNK_SEQ_SIZE;
@@ -140,19 +140,15 @@ void * loadStep1(void * vparams){
     		currentSeq.realDataLength += auxLen;
         	currentPos = strtok_r(NULL, "\r\n", &saveptr);
     	}
-//    	printf("%s\n", currentSeq.name);
-//    	printf("%d --- %s\n", currentSeq.realDataLength, currentSeq.realData);
+ 
     	if (currentSeq.realDataLength < 4) {
     		currentSeq.dataLength = 0;
     	} else if (Context.nonExhaustive){
             // We skip the 2nd and 4th copies shifted
-            //int lengthFirst = excess64(trunc4(currentSeq.realDataLength));
-            //int lengthThird = excess64(trunc4(currentSeq.realDataLength - 2));
-    		//currentSeq.dataLength = lengthFirst + lengthThird;
+           
     		currentSeq.dataLength = 2 * excess64(currentSeq.realDataLength);
     	} else {
-    		//currentSeq.dataLength = excess64(4*currentSeq.realDataLength-8);
-    		//currentSeq.dataLength = excess64(4*currentSeq.realDataLength-12);
+    		
     		currentSeq.dataLength = 4 * excess64(currentSeq.realDataLength);
     	}
     	bulkDataSize += currentSeq.dataLength;

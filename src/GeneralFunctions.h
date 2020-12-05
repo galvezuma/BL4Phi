@@ -2,7 +2,7 @@
  * File:   GeneralFunctions.h
  * Author: galvez
  *
- * Created on 5 de septiembre de 2016, 19:15
+ * Created on 5 de septiembre de 2020, 19:15
  */
 
 #ifndef GENERALFUNCTIONS_H

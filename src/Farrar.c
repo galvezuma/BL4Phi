@@ -1,7 +1,7 @@
 /*
  * Farrar.c
  *
- *  Created on: 12 de sept. de 2016
+ *  Created on: 12 de sept. de 2020
  *      Author: galvez
  */
 
@@ -10,10 +10,10 @@
 #include <immintrin.h>
 
 
-/* Esta función utiliza en la memoria compartida:
- * un uint8_t con el número de letras del alfabeto
- * 128 uint_8 con la posición de cada letra en la matriz
- * tantos int8_t como sea (num_letras+1)*(num_letras+1)
+/* This function is used in shared memory:
+ * a uint8_t with the number of letters of the alphabet
+ * 128 uint_8 with the position of each letter in the array
+ * as many int8_t as you want (num_letters+1)*(num_letters+1)
 */
 int8_t * load_matrix(char* filename) {
 	int rows;
@@ -29,17 +29,17 @@ int8_t * load_matrix(char* filename) {
 	rows = 0;
 	while (fgets(buffer_text, MAX_LINE_LENGTH, myFile)) {
 		if (buffer_text[0] == '#')
-			continue; // Las líneas que empiezan por # son comentarios.
-		if (buffer_text[0] == ' ') { //Es el alfabeto. Se asume que es el mismo en horizontal y en vertical
+			continue; // Lines beginning with # are comments.
+		if (buffer_text[0] == ' ') { //It is the alphabet. It is assumed to be the same horizontally and vertically
 			int longitud = strlen(buffer_text);
 			for (int i = 0; i < longitud; i++) {
 				if (buffer_text[i] != ' ' && buffer_text[i] != '\n'
-						&& buffer_text[i] != '\r') { //Suponemos que es una letra
-					Context.letters[(unsigned)(buffer_text[i])] = Context.num_letters; // Se guarda la posición de la letra
+						&& buffer_text[i] != '\r') { //We assume that it is a letter
+					Context.letters[(unsigned)(buffer_text[i])] = Context.num_letters; // The position of the letter is saved
 					Context.num_letters++;
 				}
 			}
-			// La última letra se asume que es * (cualquier otra cosa).
+			// The last letter is assumed to be * (anything else).
 			int ultima_pos = Context.num_letters - 1;
 			for (int i = 0; i < 128; i++)
 				if (Context.letters[i] == 255)
@@ -47,14 +47,14 @@ int8_t * load_matrix(char* filename) {
 			Context.matrix = (int8_t *)malloc(Context.num_letters*Context.num_letters*sizeof(int8_t));
 			continue;
 		}
-		// Si se llega aquí es porque se están leyendo las filas de la matriz
-		// Los datos se graban en memoria compartida conforme se van leyendo
+		// If you get here it is because you are reading the rows of the matrix
+		// Data is recorded in shared memory as it is read
 
-		//Descartamos el primer elemento (una letra en columna) y el resto vamos añadiendo
+		//We discard the first element (a letter in column) and the rest we add
 		char * line = buffer_text;
 		char * newLine = line + 1;
 		int cols = 0;
-		//Mientras siga habiendo enteros (linea!=nuevalinea), añadimos a la matriz
+		//As long as there are still integers (line!=newline), we add to the matrix
 		short end_iteration = 0;
 		while (!end_iteration) {
 			line = newLine;
@@ -112,24 +112,24 @@ void calculateFarrarProfile() {
 			Context.Farrar.profile[offset] = Context.matrix[pos_letra_ref*Context.num_letters+x];
 			offset++;
 		}
-		// Rellenar a 0 el resto
+		// Fill in the rest to 0
 		for( ; y < Context.Farrar.long_profile; y++){
 			Context.Farrar.profile[offset] = 0;
 			offset++;
 		}
 	}
 
-	// Barajar el perfil segun Farrar (Fig. 1 de su artículo).
+	// Shuffle the profile according to Farrar (Fig. 1 of his article).
 	int32_t columnaAux[Context.Farrar.long_profile] __attribute__((aligned(64)));
 	for(int x=0; x<Context.num_letters; x++){
 		offset = x * Context.Farrar.long_profile;
 		for(int y=1; y<=Context.Farrar.long_profile; y++){
 			int segLen = (64 / sizeof(int32_t));
 			int numSeg = Context.Farrar.long_profile / segLen;
-			int base = 1+(y-1)/segLen; // base y tt son la clave del barajar.
+			int base = 1+(y-1)/segLen; // base and tt are the key to the shuffle.
 			int tt = (y-1) % segLen;
 			columnaAux[y-1] = Context.Farrar.profile[offset + base + tt * numSeg - 1];
-			//printf("orij[%d]=%d farrar[%d]=%d\n", y-1, profile[offset + y-1], base + tt * numSeg - 1, columnaAux[y-1]);
+			 
 		}
 		memcpy(Context.Farrar.profile + offset, columnaAux, Context.Farrar.long_profile * sizeof(int32_t));
 	}
@@ -143,7 +143,7 @@ void prepareForNextQuery() {
 
 void prepareFarrarObject(FarrarObject * o) {
 	o->columnaActual_Max =  (int32_t *)_mm_malloc((Context.Farrar.long_profile)*sizeof(int32_t), 64);
-	//estado_interno.columna_Up =   (int32_t *)_mm_malloc((long_profile+1)*sizeof(int32_t), 64);
+	 
 	o->columna_Left = (int32_t *)_mm_malloc((Context.Farrar.long_profile)*sizeof(int32_t), 64);
 	o->columnaPrevia_Max =  (int32_t *)_mm_malloc((Context.Farrar.long_profile)*sizeof(int32_t), 64);
 }
@@ -200,7 +200,7 @@ int16_t smith_waterman_farrar(FarrarObject* o, char *sec_database, int16_t long_
 
 		//
 		int8_t pos_letra_database = Context.letters[(int)(sec_database[x])];
-		//printf("Letra %d %c %d\n", x, sec_database[x], pos_letra_database);
+		 
 		int32_t offset = pos_letra_database * Context.Farrar.long_profile;
 		int j;
 		for(j=0; j<numSeg; j++){
@@ -240,14 +240,8 @@ int16_t smith_waterman_farrar(FarrarObject* o, char *sec_database, int16_t long_
 			// vH = vHLoad[j]
 			vH = _mm512_load_epi32(o->columnaPrevia_Max + j*segLen);
 		}
-		// Optimización de SWAT
-		/*
-		for(int x=0; x<long_profile; x++){
-			printf("vMax[%d]=%d\n", x, o->columnaActual_Max[x]);
-		}
-		printf("Numseg: %d\n", numSeg);
-		displayV("F", vF);
-		*/
+		// SWAT optimization
+		 
 		// vF = vF << 1
 		vF = shiftRight32(vF, &vZero);
 

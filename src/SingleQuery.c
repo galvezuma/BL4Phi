@@ -24,8 +24,7 @@ void processSingleFastaWholeDatabase(Sequence * query, int * first, int * last, 
 	gettimeofday(&tiempo_inicio, NULL);
     // Create threads to process sequences.
     uint8_t numThreads = (databaseNumSequences < 5 * NUM_THREAD_FOR_PROCESSING)? 1 : NUM_THREAD_FOR_PROCESSING;
-//    if (first == NULL || numWorkers != numThreads) printf("Using non balanced load for each thread.\n");
-//    else printf("Using balanced workload for each thread.\n");
+
     double ratio = 1.0/(double)numThreads;
     pthread_t threads[numThreads];
     paramToSingleQueryProcessThread params[numThreads];
@@ -40,14 +39,7 @@ void processSingleFastaWholeDatabase(Sequence * query, int * first, int * last, 
     for(int i=0; i < numThreads; i++){
         params[i].id = i;
         params[i].query = query;
-//        if (first == NULL || numWorkers != numThreads) {
-//			params[i].first = databaseNumSequences*ratio*i;
-//			params[i].last = databaseNumSequences*ratio*(i+1)-1;
-//        } else {
-//        	params[i].first = first[i];
-//        	params[i].last = last[i];
-        	// fprintf(stdout, "Worker %d: \t%d \t%d\n", i, first[i], last[i]);
-//        }
+
         pthread_create(&threads[i], NULL, processBunchSingleFastaWholeDatabase, (void *)&params[i]);
     }
     // We need to wait the threads to finish because we have passed local variables as parameters
@@ -100,97 +92,45 @@ void * processBunchSingleFastaWholeDatabase(void * vparams) {
 	params->ret.numHits = 0;
 	params->ret.numFarrar = 0;
 	params->ret.total_time = 0.0;
-//    printf("Thread Id %d: start %d end %d\n", params->id, params->first, params->last);
-    // For each database sequence in our range
-	//databaseIdx=params->first - 1;
+
 	const int step = 10;
 	while(1) {
-	//		if (params->query->dataLength > 1000){
+	
 				pthread_mutex_lock(& Context.mutex_next_db_seq);
 					startIdx = Context.next_db_seq_number;
 					Context.next_db_seq_number += step;
 				pthread_mutex_unlock(& Context.mutex_next_db_seq);
 				if (startIdx >= databaseNumSequences) break;
-	//		} else {
-	//			databaseIdx++;
-	//			if (databaseIdx > params->last) break;
-	//		}
+	
 		for(databaseIdx=startIdx; databaseIdx < startIdx+step; databaseIdx++){
 			if (databaseIdx >= databaseNumSequences) break;
-	//    for(int databaseIdx=params->first; databaseIdx <= params->last; databaseIdx++){
+	
 			params->ret.numSequencesProcessed ++;
 			params->ret.numLettersProcessed += databaseAlignedDemultiplexed[databaseIdx].realDataLength;
-			//memset(neighbourhood, 0, databaseAlignedDemultiplexed[databaseIdx].realDataLength * sizeof(uint16_t));
-	//            printf("%s\n", databaseAlignedDemultiplexed[databaseIdx].data);
-
-			//
-
-			//
+		
 
 			uint16_t nearbyShifter = 0;
 			// For each block of 4 consecutive letters in the query
 			for(int queryIdx=0; queryIdx < params->query->dataLength - 3; queryIdx++){
-	//        	printf("Loading queryy %c%c%c%c\n", params->query->data [queryIdx],
-	//        			params->query->data [queryIdx+1],
-	//					params->query->data [queryIdx+2],
-	//					params->query->data [queryIdx+3]);
-				//uint32_t block __attribute__((aligned(4))) = * (uint32_t *)&(params->query->data [queryIdx]); // & 0x00FFFFFF;
+	
 				uint32_t block __attribute__((aligned(4))) = * (uint32_t *)&(shrinkedQuery [queryIdx]); // & 0x00FFFFFF;
 				__m512i queryVector = _mm512_extload_epi32 (&block, _MM_UPCONV_EPI32_NONE, _MM_BROADCAST_1X16, 1);
-	//            printf("--- "); view512iAsChar(queryVector);
+	 
 				// We check every block of VECTOR_SIZE bytes
 				__mmask16 res = 0;
 				#pragma unroll(4)
 				for(int targetIdx=0; targetIdx < databaseAlignedDemultiplexed[databaseIdx].dataLength ; targetIdx+=VECTOR_SIZE){
-	//            	printf("TargetIdx %d\n", targetIdx);
+	 
 					__m512i targetVector = _mm512_load_epi32 ((__m512i const*) (databaseAlignedDemultiplexed[databaseIdx].data + targetIdx));
 	//                view512iAsChar(targetVector);
 					res |= _mm512_cmpeq_epi32_mask  (queryVector, targetVector);
-	//                printf("Res %d\n", res);
+	 
 				}
 				if (res != 0) {
-//                	printf("%s contains %c%c%c%c\n", databaseAlignedDemultiplexed[databaseIdx].name,
-//                        params->query->data[queryIdx],
-//                        params->query->data[queryIdx+1],
-//                        params->query->data[queryIdx+2],
-//                        params->query->data[queryIdx+3]
-//                        );
 
-//                	int farrarInit = targetIdx % (databaseAlignedDemultiplexed[databaseIdx].dataLength / 4);
-//                	printf("Query: %c%c%c%c\n", params->query->data [queryIdx], params->query->data [queryIdx+1], params->query->data [queryIdx+2], params->query->data [queryIdx+3]);
-//                	printf("Res: %d\n", res);
-//                	for(; (res & 0x0001) == 0;res = res >> 1) farrarInit += 4;
-//                	farrarInit += targetIdx / (databaseAlignedDemultiplexed[databaseIdx].dataLength / 4);
-//                	neighbourhood[farrarInit] = queryIdx;
-//                	printf("Subject: ");
-//                	for(int i=0;i<64 && farrarInit+i<databaseAlignedDemultiplexed[databaseIdx].realDataLength; i++){
-//                		printf("%c", databaseAlignedDemultiplexed[databaseIdx].realData[farrarInit+i]);
-//                	}
-//                	printf("--\n");
-					/*
-					farrarInit = (farrarInit < 50)? 0 : farrarInit - 50;
-					int farrarLong = 100;
-					if (farrarInit + farrarLong > databaseAlignedDemultiplexed[databaseIdx].realDataLength)
-						farrarLong = databaseAlignedDemultiplexed[databaseIdx].realDataLength - farrarInit;
-					params->ret.numFarrar ++;
-					//printf("%d\t%d\t%d\n", farrarInit, farrarLong, res);
-					uint32_t score = smith_waterman_farrar(&o, databaseAlignedDemultiplexed[databaseIdx].realData + farrarInit, farrarLong);
-					if (score >= Context.threshold) {
-						params->ret.numHits ++;
-						score = smith_waterman_farrar(&o, databaseAlignedDemultiplexed[databaseIdx].realData, (int16_t)(databaseAlignedDemultiplexed[databaseIdx].realDataLength));
-						// Show hit with sequence name
-						fprintf(stdout, "Hit. Score: %d. Sequence: %s\n", score, databaseAlignedDemultiplexed[databaseIdx].name);
-						targetIdx = (queryIdx = INT_MAX - 1);
-					}
-					*/
 
 					if ((nearbyShifter != 0) && (__builtin_popcount (nearbyShifter) >= Context.nearby)) {
-//                    	int count = 1;
-//                    	for(int pos=farrarInit-1; pos>=0 && pos>farrarInit-32; pos--){
-//                    		if (neighbourhood[pos] != 0 && neighbourhood[pos] > queryIdx - 32)
-//                    			count++;
-//                    	}
-//                    	if (count > Context.nearby) {
+
 							params->ret.numFarrar ++;
 							uint32_t score = smith_waterman_farrar(&o, databaseAlignedDemultiplexed[databaseIdx].realData, (int16_t)(databaseAlignedDemultiplexed[databaseIdx].realDataLength));
 							if (score >= Context.threshold) {
