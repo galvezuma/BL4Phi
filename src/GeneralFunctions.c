@@ -38,7 +38,6 @@ void view512iAsBytes(__m512i vector){
 }
 
 
-
 /*
  * COLLAPSE LESS ABUNDANT FIRST
  */

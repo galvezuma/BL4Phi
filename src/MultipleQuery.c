@@ -1,7 +1,6 @@
 /*
  * MultipleQuery.c
  *
- *  Created on: 13 de sept. de 2020
  *      Author: galvez
  */
 
