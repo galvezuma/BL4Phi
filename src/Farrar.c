@@ -1,7 +1,8 @@
 /*
  * Farrar.c
  *
- *      Author: SGR
+ *  Created on: 12 de sept. de 2020	
+ *      Author: galvez
  */
 
 #include "Types.h"
@@ -9,10 +10,10 @@
 #include <immintrin.h>
 
 
-/* This functions uses shared memory:
- * an uint8_t with the number of letters in the alphabet
- * 128 uint_8 with the position of each letter in the matrix
- * as many int8_t as (num_letters+1)*(num_letters+1)
+/* This function is used in shared memory:
+ * a uint8_t with the number of letters of the alphabet
+ * 128 uint_8 with the position of each letter in the array
+ * as many int8_t as you want (num_letters+1)*(num_letters+1)
 */
 int8_t * load_matrix(char* filename) {
 	int rows;
@@ -28,17 +29,17 @@ int8_t * load_matrix(char* filename) {
 	rows = 0;
 	while (fgets(buffer_text, MAX_LINE_LENGTH, myFile)) {
 		if (buffer_text[0] == '#')
-			continue; // Those lines that start with # are comments.
-		if (buffer_text[0] == ' ') { // This is the alphabet. We assume it is the same both in vertical and horizontal
+			continue; // Lines beginning with # are comments.
+		if (buffer_text[0] == ' ') { //It is the alphabet. It is assumed to be the same horizontally and vertically
 			int longitud = strlen(buffer_text);
 			for (int i = 0; i < longitud; i++) {
 				if (buffer_text[i] != ' ' && buffer_text[i] != '\n'
-						&& buffer_text[i] != '\r') { // We assume it is a letter
-					Context.letters[(unsigned)(buffer_text[i])] = Context.num_letters; // We store the position of the letter
+						&& buffer_text[i] != '\r') { //We assume that it is a letter
+					Context.letters[(unsigned)(buffer_text[i])] = Context.num_letters; // The position of the letter is saved
 					Context.num_letters++;
 				}
 			}
-			// The last letter is assumed that it is * (any other thing).
+			// The last letter is assumed to be * (anything else).
 			int ultima_pos = Context.num_letters - 1;
 			for (int i = 0; i < 128; i++)
 				if (Context.letters[i] == 255)
@@ -46,14 +47,14 @@ int8_t * load_matrix(char* filename) {
 			Context.matrix = (int8_t *)malloc(Context.num_letters*Context.num_letters*sizeof(int8_t));
 			continue;
 		}
-		// When we arrive here is because we are reading the rows of the matrix
-		// Data is stored in shared memory as soon as they are read
+		// If you get here it is because you are reading the rows of the matrix
+		// Data is recorded in shared memory as it is read
 
-		// The first element is discarded (a letter in column) and the rest is added
+		//We discard the first element (a letter in column) and the rest we add
 		char * line = buffer_text;
 		char * newLine = line + 1;
 		int cols = 0;
-		// While there are integers (line!=newLine), we add to the matrix
+		//As long as there are still integers (line!=newline), we add to the matrix
 		short end_iteration = 0;
 		while (!end_iteration) {
 			line = newLine;
@@ -118,17 +119,17 @@ void calculateFarrarProfile() {
 		}
 	}
 
-	// The profile is shuffled following Farrar (Fig. 1 of his manuscript).
+	// Shuffle the profile according to Farrar (Fig. 1 of his article).
 	int32_t columnaAux[Context.Farrar.long_profile] __attribute__((aligned(64)));
 	for(int x=0; x<Context.num_letters; x++){
 		offset = x * Context.Farrar.long_profile;
 		for(int y=1; y<=Context.Farrar.long_profile; y++){
 			int segLen = (64 / sizeof(int32_t));
 			int numSeg = Context.Farrar.long_profile / segLen;
-			int base = 1+(y-1)/segLen; // base and tt are the key point to shuffle.
+			int base = 1+(y-1)/segLen; // base y tt son la clave del barajar.
 			int tt = (y-1) % segLen;
 			columnaAux[y-1] = Context.Farrar.profile[offset + base + tt * numSeg - 1];
-		 
+			
 		}
 		memcpy(Context.Farrar.profile + offset, columnaAux, Context.Farrar.long_profile * sizeof(int32_t));
 	}
@@ -141,25 +142,21 @@ void prepareForNextQuery() {
 
 
 void prepareFarrarObject(FarrarObject * o) {
-	o->columnCurrent_Max =  (int32_t *)_mm_malloc((Context.Farrar.long_profile)*sizeof(int32_t), 64);
-	 
-	o->column_Left = (int32_t *)_mm_malloc((Context.Farrar.long_profile)*sizeof(int32_t), 64);
-	o->columnPrevious_Max =  (int32_t *)_mm_malloc((Context.Farrar.long_profile)*sizeof(int32_t), 64);
+	o->columnaActual_Max =  (int32_t *)_mm_malloc((Context.Farrar.long_profile)*sizeof(int32_t), 64);
+	
+	o->columna_Left = (int32_t *)_mm_malloc((Context.Farrar.long_profile)*sizeof(int32_t), 64);
+	o->columnaPrevia_Max =  (int32_t *)_mm_malloc((Context.Farrar.long_profile)*sizeof(int32_t), 64);
 }
 
 void freeFarrarObject(FarrarObject * o) {
-    _mm_free(o->columnCurrent_Max); o->columnCurrent_Max = NULL;
-    _mm_free(o->columnPrevious_Max); o->columnPrevious_Max = NULL;
-    _mm_free(o->column_Left); o->column_Left = NULL;
+    _mm_free(o->columnaActual_Max); o->columnaActual_Max = NULL;
+    _mm_free(o->columnaPrevia_Max); o->columnaPrevia_Max = NULL;
+    _mm_free(o->columna_Left); o->columna_Left = NULL;
 }
 
 inline __m512i shiftRight32(__m512i a, __m512i * vZero){
-	int x;
-	int32_t rbuffer[64/sizeof(int32_t)] __attribute__((aligned(64)));
-	// Stores into memory
-	_mm512_store_epi32(rbuffer, a);
-	a = _mm512_loadunpackhi_epi32(*vZero, rbuffer+15);
-	return a;
+	
+	return _mm512_alignr_epi32 (a, *vZero, 15);
 }
 
 int16_t smith_waterman_farrar(FarrarObject* o, char *sec_database, int16_t long_sec_database){
@@ -182,24 +179,25 @@ int16_t smith_waterman_farrar(FarrarObject* o, char *sec_database, int16_t long_
 		vGapExtend = _mm512_load_epi32(ceg);
 		vZero = _mm512_xor_epi32(vZero, vZero);
 
+	#pragma GCC diagnostic ignored "-Wuninitialized"
 	vMax = _mm512_xor_epi32(vMax, vMax); // vMax = <0, 0, ..., 0>
 
 	for(int j=0; j<Context.Farrar.long_profile; j++){
-		o->columnPrevious_Max[j] = 0;
+		o->columnaPrevia_Max[j] = 0;
 		//o->columna_Up[j] = 0;
-		o->column_Left[j] = 0;
+		o->columna_Left[j] = 0;
 	}
 	for(int x=0; x<long_sec_database; x++){
 		// vF = <0, 0, ..., 0>
 		vF = _mm512_xor_epi32(vF, vF);
 
 		// vH = vHStore[numSeg - 1] << 1
-		vH = _mm512_load_epi32(o->columnPrevious_Max + (numSeg - 1) * segLen);
+		vH = _mm512_load_epi32(o->columnaPrevia_Max + (numSeg - 1) * segLen);
 		vH = shiftRight32(vH, &vZero);
 
 		//
 		int8_t pos_letra_database = Context.letters[(int)(sec_database[x])];
-		 
+		
 		int32_t offset = pos_letra_database * Context.Farrar.long_profile;
 		int j;
 		for(j=0; j<numSeg; j++){
@@ -214,12 +212,12 @@ int16_t smith_waterman_farrar(FarrarObject* o, char *sec_database, int16_t long_
 
 			// vE[j] = max(vH, vE[j])
 			// vH = max(vH, vF)
-			vE_j = _mm512_load_epi32(o->column_Left + j*segLen);
+			vE_j = _mm512_load_epi32(o->columna_Left + j*segLen);
 			vH = _mm512_max_epi32(vH, vE_j);
 			vH = _mm512_max_epi32(vH, vF);
 
 			// vHStore[j] = vH
-			_mm512_store_epi32(o->columnCurrent_Max + j*segLen, vH);
+			_mm512_store_epi32(o->columnaActual_Max + j*segLen, vH);
 
 			// vAux = vH - vGapOpen
 			vAux0 = _mm512_sub_epi32(vH, vGapOpen);
@@ -229,7 +227,7 @@ int16_t smith_waterman_farrar(FarrarObject* o, char *sec_database, int16_t long_
 			vE_j = _mm512_max_epi32(vE_j, vZero);
 			// vE[j] = max(vE[j], vAux)
 			vE_j = _mm512_max_epi32(vE_j, vAux0);
-			_mm512_store_epi32(o->column_Left + j*segLen, vE_j);
+			_mm512_store_epi32(o->columna_Left + j*segLen, vE_j);
 			// vF = vF - vGapExtend
 			vF = _mm512_sub_epi32(vF, vGapExtend);
 			vF = _mm512_max_epi32(vF, vZero);
@@ -237,7 +235,7 @@ int16_t smith_waterman_farrar(FarrarObject* o, char *sec_database, int16_t long_
 			vF = _mm512_max_epi32(vF, vAux0);
 
 			// vH = vHLoad[j]
-			vH = _mm512_load_epi32(o->columnPrevious_Max + j*segLen);
+			vH = _mm512_load_epi32(o->columnaPrevia_Max + j*segLen);
 		}
 		// SWAT optimization
 		 
@@ -246,14 +244,14 @@ int16_t smith_waterman_farrar(FarrarObject* o, char *sec_database, int16_t long_
 
 		j = 0;
 		do { // while(AnyElement(vF > vHStore[j] - vGapOpen
-			vH = _mm512_load_epi32(o->columnCurrent_Max + j*segLen);
+			vH = _mm512_load_epi32(o->columnaActual_Max + j*segLen);
 			vAux0 = _mm512_sub_epi32(vH, vGapOpen);
 			vAux0 = _mm512_max_epi32(vAux0, vZero);
 			__mmask16 mascara = _mm512_cmpgt_epi32_mask (vF, vAux0);
 			if (mascara == 0) break;
 			// vHStore[j] = max(vHStore[j], vF)
 			vH = _mm512_max_epi32(vH, vF);
-			_mm512_store_epi32(o->columnCurrent_Max + j*segLen, vH);
+			_mm512_store_epi32(o->columnaActual_Max + j*segLen, vH);
 
 			// vF = vF - vGapExtend
 			vF = _mm512_sub_epi32(vF, vGapExtend);
@@ -267,9 +265,9 @@ int16_t smith_waterman_farrar(FarrarObject* o, char *sec_database, int16_t long_
 		} while(1);
 
 		//
-		aux_Max = o->columnCurrent_Max;
-		o->columnCurrent_Max = o->columnPrevious_Max;
-		o->columnPrevious_Max = aux_Max;
+		aux_Max = o->columnaActual_Max;
+		o->columnaActual_Max = o->columnaPrevia_Max;
+		o->columnaPrevia_Max = aux_Max;
 		//
 	}
 

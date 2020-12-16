@@ -1,18 +1,26 @@
 /*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+/*
  * File:   main.c
- * Author: Sergio Gálvez Rojas
+ * Author: Sergio GÃ¡lvez Rojas
  *
+ * Created on 01 June 2020, 14:03
  */
 
 /*
  * TO DO: Optimizations to do:
  *
- * 2.- Option -b (best). Provide all the best in case of several sequences having the same best score.
- *
  * 3.- KNL. Usage of amino acids letters in 4 bits instead of 8 bits. This should divide by two the execution time.
  * Intrinsic of epi16 must be used.
  *
  * 5.- Partition of a big database into parts.
+ *
+ * 6.- A good wish. Utilization of several Xeon-Phi cards. I do not like this because it forces to coordinate the cards from
+ * outside, whereas we have programmed the cards in native mode.
  *
  * 7.- Future one. Provide the actual alignment including data: start, end, etc.
  *
@@ -27,7 +35,7 @@
  */
 
 /*
- * Release 2020_08 of 07-Sep-20 of UniProtKB/Swiss-Prot contains 551987 sequence entries,
+ * Release 2016_08 of 07-Sep-16 of UniProtKB/Swiss-Prot contains 551987 sequence entries,
  * comprising 197275398 amino acids abstracted from 246580 references.
  */
 
@@ -44,6 +52,7 @@
 #include "MultipleQuery.h"
 #include "ManageDatabase.h"
 #include "Farrar.h"
+#include "Threads.h"
 
 
 SequenceDemultiplexed * databaseAlignedDemultiplexed = NULL;
@@ -52,7 +61,7 @@ uint32_t databaseNumSequences;
 // Context is mainly Read Only in the threads (but -best-)
 // This alignment is critical for performance
 //#pragma pack(1)
-__declspec(align(64)) struct GlobalContext Context;
+__attribute__((aligned (64))) struct GlobalContext Context;
 
 void initContext(){
 	loadCluster(21);
@@ -111,7 +120,7 @@ int main(int argc, char** argv) {
 	    }
 	  }
 	  if (argc < pos + 2) {
-	    fprintf(stderr, "Usage: BLVector [-t threshold] [-p threads] [-c cluster] [-m matrix] [-n nearby_per_16] [-f(ast:non exhaustive)] [-b(est hit only)] [-g open_gap_cost extend_gap_cost] query.fasta database.fasta\n");
+	    fprintf(stderr, "Usage: BLPhi [-t threshold] [-p threads] [-c cluster] [-m matrix] [-n nearby_per_16] [-f(ast:non exhaustive)] [-b(est hit only)] [-g open_gap_cost extend_gap_cost] query.fasta database.fasta\n");
 	    return 1;
 	  }
 	  if (((uint8_t)Context.open_gap_cost) > 0xFF) { fprintf(stderr, "Open gap cost (%d) too big. The size is a byte.\n", Context.open_gap_cost); return 1; }
@@ -121,9 +130,12 @@ int main(int argc, char** argv) {
 	  Context.matrix = load_matrix(matrix_filename); // This assignment is redundant
 	  if (Context.matrix == NULL) { return 1; }
 	  int numWorkers = MAX_NUM_THREAD_FOR_PROCESSING;
-	  int first[numWorkers], last[numWorkers];
+	  // int first[numWorkers], last[numWorkers];
 	  loadDatabase(argv[pos+1]);
 
+	  // Prepare and start Threads
+	  allocateThreads();
+	  startAndWaitThreads();
 	  while ((Context.sec_ref = loadNextQueryFromFasta(argv[pos])) != NULL) {
 		  if (Context.sec_ref == NULL) { return 1; }
 		  // OPTIMIZATIONS AND TRANSFORMATIONS FOR FARRAR
@@ -138,6 +150,9 @@ int main(int argc, char** argv) {
 		  prepareForNextQuery();
 	  }
 
+	  // Stop and deallocate Threads
+	  stopThreads();
+	  deallocateThreads();
 
 	  // TASKS TO FINISH
 	  printf("Freeing memory\n");

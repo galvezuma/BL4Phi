@@ -1,7 +1,8 @@
 /* 
  * File:   GeneralFunctions.h
- * Author: SGR
+ * Author: galvez
  *
+ * Created on 5 de septiembre de 2020, 19:15
  */
 
 #ifndef GENERALFUNCTIONS_H

@@ -2,6 +2,7 @@
  * File:   Types.h
  * Author: galvez
  *
+ * Created on 5 de septiembre de 2020, 18:03
  */
 
 #ifndef TYPES_H
@@ -12,8 +13,8 @@
 
 #define MAX_FILENAME_LENGTH 1024
 #define MAX_LINE_LENGTH 1024
-#define NUM_THREAD_FOR_LOADING 64
-#define MAX_NUM_THREAD_FOR_PROCESSING 228
+#define NUM_THREAD_FOR_LOADING 8
+#define MAX_NUM_THREAD_FOR_PROCESSING 12
 #define MAX_SEQUENCE_LENGTH (1024*100)
 #define VECTOR_SIZE 64
 

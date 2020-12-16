@@ -1,6 +1,7 @@
 /*
  * ManageDatabase.c
  *
+ *  Created on: 13 de oct. de 2020
  *      Author: galvez
  */
 
@@ -47,7 +48,8 @@ void loadDatabase(char * filename){
     fseek(in, 0, SEEK_SET);
     bulkFile = (char *)malloc(size+1);
     if (bulkFile == NULL) errorAndExit("", "Fatal error: Out of memory.");
-    fread(bulkFile, size, 1, in);
+    size_t numBytesRead = fread(bulkFile, 1, size, in);
+    if (numBytesRead != size) errorAndExit(filename, "Size read does not match to file size.");
     bulkFile[size]=0;
     fclose(in);
     //
@@ -65,7 +67,7 @@ void loadDatabase(char * filename){
         paramsLoad[i].bulkFile = bulkFile;
         paramsLoad[i].first = size*ratio*i;
         paramsLoad[i].last = size*ratio*(i+1)-1;
-         
+       
         pthread_create(&threads[i], NULL, loadStep1, (void *)&paramsLoad[i]);
     }
     // We need to wait the threads to finish because we have passed local variables as parameters
@@ -118,7 +120,7 @@ void * loadStep1(void * vparams){
 	uint64_t bulkDataSize = 0;
     initSequenceList(&(params->ret));
     char * currentPos;
-    char * okReading;
+    // char * okReading;
     SequenceDemultiplexed currentSeq;
     //
     // We go to the first occurrence of '>'
@@ -150,7 +152,7 @@ void * loadStep1(void * vparams){
     		currentSeq.dataLength = 0;
     	} else if (Context.nonExhaustive){
             // We skip the 2nd and 4th copies shifted
-           
+            
     		currentSeq.dataLength = 2 * excess64(currentSeq.realDataLength);
     	} else {
     		 

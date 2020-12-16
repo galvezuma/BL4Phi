@@ -30,13 +30,14 @@ void view512iAsChar(__m512i vector){
     printf("\n");
 }
 void view512iAsBytes(__m512i vector){
-    char data[16]__attribute__((aligned(64)));
+    char data[64]__attribute__((aligned(64)));
     _mm512_store_si512 ((__m512i*) data, vector);
     for(int i=0; i<64; i++)
         printf("%d", data[i]);
     printf("\n");
 }
 
+ 
 
 /*
  * COLLAPSE LESS ABUNDANT FIRST
@@ -147,3 +148,4 @@ char shrinkLetter(char letter){
 	return selectedShrinkletter(letter);
 }
 
+ 

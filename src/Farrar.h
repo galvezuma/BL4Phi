@@ -14,10 +14,10 @@
 #include <malloc.h>
 
 typedef struct {
-	int32_t * columnCurrent_Max;
-	//int32_t * column_Up;
-	int32_t * column_Left;
-	int32_t * columnPrevious_Max;
+	int32_t * columnaActual_Max;
+	//int32_t * columna_Up;
+	int32_t * columna_Left;
+	int32_t * columnaPrevia_Max;
 } FarrarObject;
 
 int8_t * load_matrix(char* filename);

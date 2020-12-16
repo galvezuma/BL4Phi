@@ -1,31 +1,43 @@
-SRCS = Farrar.c GeneralFunctions.c ManageDatabase.c MultipleQuery.c SingleQuery.c BLPhi.c
-OBJS = $(SRCS:.c=.o)
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
 
-#
-# Please, note the usage of /Qmic for Xeon-Phi. Remove when compiling for
-# other architectures. In addition, the option /Q is used when using the 
-# Intel compiler in Windows.
-#
+-include ../makefile.init
 
 RM := rm -rf
-CC := icl
-CFLAGS := /Qmic -O3 -c 
-LFLAGS := /Qmic -o
-LIBS := -lpthread -lrt
-MAIN = BLVector
 
-all: $(MAIN)
+# All of the sources participating in the build are defined here
+-include sources.mk
+-include src/subdir.mk
+-include subdir.mk
+-include objects.mk
 
-$(MAIN): $(OBJS) 
-	@echo 'Linking'
-	$(CC) $(LFLAGS) $(MAIN) $(LIBS) $(OBJS)
-	
+ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(strip $(C_DEPS)),)
+-include $(C_DEPS)
+endif
+endif
 
-.c.o:
-	$(CC) $(CFLAGS) $^ $(LIBS) -o $@
+-include ../makefile.defs
 
-.PHONY: clean
+# Add inputs and outputs from these tool invocations to the build variables 
 
+# All Target
+all: BL512_v2
+
+# Tool invocations
+BL512_v2: $(OBJS) $(USER_OBJS)
+	@echo 'Building target: $@'
+	@echo 'Invoking: GCC C Linker'
+	gcc  -o "BL512_v2" $(OBJS) $(USER_OBJS) $(LIBS)
+	@echo 'Finished building target: $@'
+	@echo ' '
+
+# Other Targets
 clean:
-	$(RM) $(OBJS) $(MAIN)
-	
+	-$(RM) $(EXECUTABLES)$(OBJS)$(C_DEPS) BL512_v2
+	-@echo ' '
+
+.PHONY: all clean dependents
+
+-include ../makefile.targets
