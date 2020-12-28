@@ -1,31 +1,57 @@
-SRCS = Farrar.c GeneralFunctions.c ManageDatabase.c MultipleQuery.c SingleQuery.c BLPhi.c
-OBJS = $(SRCS:.c=.o)
+################################################################################
+# SGR
+################################################################################
 
-#
-# Please, note the usage of /Qmic for Xeon-Phi. Remove when compiling for
-# other architectures. In addition, the option /Q is used when using the 
-# Intel compiler in Windows.
-#
+-include ../makefile.init
 
 RM := rm -rf
 CC := icl
 CFLAGS := /Qmic -O3 -c 
 LFLAGS := /Qmic -o
 LIBS := -lpthread -lrt
-MAIN = BLVector
 
-all: $(MAIN)
+# All of the sources participating in the build are defined here
+-include sources.mk
+-include src/subdir.mk
+-include subdir.mk
+-include objects.mk
 
-$(MAIN): $(OBJS) 
+ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(strip $(C_DEPS)),)
+-include $(C_DEPS)
+endif
+endif
+
+-include ../makefile.defs
+
+# Add inputs and outputs from these tool invocations to the build variables 
+
+# All Target
+
+
+# Tool invocations
+all: 
+	@echo 'Building'
+	pwd
+	$(CC) $(CFLAGS) Farrar.c $(LIBS) -o ../Release/Farrar.o
+	$(CC) $(CFLAGS) GeneralFunctions.c $(LIBS) -o ../Release/GeneralFunctions.o
+	$(CC) $(CFLAGS) ManageDatabase.c $(LIBS) -o ../Release/ManageDatabase.o
+	$(CC) $(CFLAGS) MultipleQuery.c $(LIBS) -o ../Release/MultipleQuery.o
+	$(CC) $(CFLAGS) SingleQuery.c $(LIBS) -o ../Release/SingleQuery.o
+	$(CC) $(CFLAGS) Threads.c $(LIBS) -o ../Release/Threads.o
+	$(CC) $(CFLAGS) BLVector.c $(LIBS) -o ../Release/BLVector.o
 	@echo 'Linking'
-	$(CC) $(LFLAGS) $(MAIN) $(LIBS) $(OBJS)
-	
-
-.c.o:
-	$(CC) $(CFLAGS) $^ $(LIBS) -o $@
-
-.PHONY: clean
-
+	$(CC) $(LFLAGS) ../Release/BLVector $(LIBS) ../Release/BLVector.o ../Release/SingleQuery.o ../Release/Threads.o ../Release/MultipleQuery.o ../Release/ManageDatabase.o ../Release/GeneralFunctions.o ../Release/Farrar.o
+	rm /cygdrive/c/Users/galve/mic0fs/executables/BLVector
+	cp ../Release/BLVector /cygdrive/c/Users/galve/mic0fs/executables/BLVector
+	chmod 777 /cygdrive/c/Users/galve/mic0fs/executables/BLVector
+# Other Targets
 clean:
-	$(RM) $(OBJS) $(MAIN)
-	
+	-$(RM) $(OBJS)$(C_DEPS)$(EXECUTABLES) BLVector
+	-@echo 'Cleaned'
+	pwd
+
+.PHONY: all clean dependents
+.SECONDARY:
+
+-include ../makefile.targets

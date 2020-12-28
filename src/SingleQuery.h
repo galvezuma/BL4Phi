@@ -2,7 +2,6 @@
  * File:   SingleQuery.h
  * Author: galvez
  *
- * Created on 5 de septiembre de 2020, 17:56
  */
 
 #ifndef SINGLEQUERY_H

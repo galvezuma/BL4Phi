@@ -1,7 +1,6 @@
 /*
  * ManageDatabase.h
  *
- *  Created on: 13 de oct. de 2020
  *      Author: galvez
  */
 
@@ -10,8 +9,6 @@
 
 #include "Types.h"
 
-#undef NUM_THREAD_FOR_LOADING
-#define NUM_THREAD_FOR_LOADING 32
 #define CHUNK_SEQ_SIZE 2500
 
 typedef struct _SequencesChunk {

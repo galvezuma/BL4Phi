@@ -1,7 +1,6 @@
 /*
  * ManageDatabase.c
  *
- *  Created on: 13 de oct. de 2020
  *      Author: galvez
  */
 
@@ -51,9 +50,13 @@ void loadDatabase(char * filename){
     fread(bulkFile, size, 1, in);
     bulkFile[size]=0;
     fclose(in);
+    //
+    gettimeofday(&tiempo_final, NULL);
+    printf("Time to load database file: %5.3f\n", (double) (tiempo_final.tv_sec - tiempo_inicio.tv_sec) * 1000 + ((double) (tiempo_final.tv_usec - tiempo_inicio.tv_usec) / 1000.0));
+	gettimeofday(&tiempo_inicio, NULL);
 
-    // Create 4 threads to load sequences into memory if needed.
-    numLoaders = (size < 100000)? 1 : NUM_THREAD_FOR_LOADING;
+    // Create threads to load sequences into memory if needed.
+    numLoaders = (size < 10000)? 1 : NUM_THREAD_FOR_LOADING;
     double ratio = 1.0/(double)numLoaders;
     pthread_t threads[numLoaders];
 
@@ -62,6 +65,7 @@ void loadDatabase(char * filename){
         paramsLoad[i].bulkFile = bulkFile;
         paramsLoad[i].first = size*ratio*i;
         paramsLoad[i].last = size*ratio*(i+1)-1;
+        //printf("Thread %d: init %d, end %d\n", i, paramsLoad[i].first, paramsLoad[i].last);
         pthread_create(&threads[i], NULL, loadStep1, (void *)&paramsLoad[i]);
     }
     // We need to wait the threads to finish because we have passed local variables as parameters
@@ -70,6 +74,7 @@ void loadDatabase(char * filename){
         pthread_join(threads[i], NULL);
         databaseNumSequences += paramsLoad[i].ret.numSequences;
     }
+
     printf("Num Sequences: %d\n", databaseNumSequences);
     // Now, it is time to put all the sequences in a single array
     databaseAlignedDemultiplexed = (SequenceDemultiplexed *)malloc(sizeof(SequenceDemultiplexed)*databaseNumSequences);
@@ -77,7 +82,7 @@ void loadDatabase(char * filename){
     uint32_t currentGlobalPos = 0;
     SequencesChunk * currentChunk = NULL;
     for(int i=0; i < numLoaders; i++){
-    	 
+    	// printf("Grouping %d\n", i);
     	currentChunk = paramsLoad[i].ret.headerChunk;
         for (int counter = paramsLoad[i].ret.numSequences - 1; counter >= 0 ; counter --){
         	int posInChunk = counter % CHUNK_SEQ_SIZE;
@@ -97,7 +102,7 @@ void loadDatabase(char * filename){
     if (currentGlobalPos != databaseNumSequences) errorAndExit("", "Fatal error: Correctness in numSequences not met.");
     //
     gettimeofday(&tiempo_final, NULL);
-    printf("Time to load database: %5.3f\n", (double) (tiempo_final.tv_sec - tiempo_inicio.tv_sec) * 1000 + ((double) (tiempo_final.tv_usec - tiempo_inicio.tv_usec) / 1000.0));
+    printf("Time to replicate sequences with %d loaders: %5.3f\n", numLoaders, (double) (tiempo_final.tv_sec - tiempo_inicio.tv_sec) * 1000 + ((double) (tiempo_final.tv_usec - tiempo_inicio.tv_usec) / 1000.0));
 }
 
 void freeDatabase(){
@@ -140,15 +145,19 @@ void * loadStep1(void * vparams){
     		currentSeq.realDataLength += auxLen;
         	currentPos = strtok_r(NULL, "\r\n", &saveptr);
     	}
- 
+//    	printf("%s\n", currentSeq.name);
+//    	printf("%d --- %s\n", currentSeq.realDataLength, currentSeq.realData);
     	if (currentSeq.realDataLength < 4) {
     		currentSeq.dataLength = 0;
     	} else if (Context.nonExhaustive){
             // We skip the 2nd and 4th copies shifted
-           
+            //int lengthFirst = excess64(trunc4(currentSeq.realDataLength));
+            //int lengthThird = excess64(trunc4(currentSeq.realDataLength - 2));
+    		//currentSeq.dataLength = lengthFirst + lengthThird;
     		currentSeq.dataLength = 2 * excess64(currentSeq.realDataLength);
     	} else {
-    		
+    		//currentSeq.dataLength = excess64(4*currentSeq.realDataLength-8);
+    		//currentSeq.dataLength = excess64(4*currentSeq.realDataLength-12);
     		currentSeq.dataLength = 4 * excess64(currentSeq.realDataLength);
     	}
     	bulkDataSize += currentSeq.dataLength;

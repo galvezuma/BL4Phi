@@ -1,7 +1,7 @@
 /*
  * Farrar.h
  *
- *  Created on: 12 de sept. de 2020
+ *  Created on: 12 de sept. de 2016
  *      Author: galvez
  */
 
@@ -14,10 +14,10 @@
 #include <malloc.h>
 
 typedef struct {
-	int32_t * columnaActual_Max;
-	
-	int32_t * columna_Left;
-	int32_t * columnaPrevia_Max;
+	int32_t * columnCurrent_Max;
+	//int32_t * column_Up;
+	int32_t * column_Left;
+	int32_t * columnPrevious_Max;
 } FarrarObject;
 
 int8_t * load_matrix(char* filename);
